@@ -1,0 +1,115 @@
+version: ~> 1.0
+
+_job_node: &_job_node
+  name: "NODE JOB"
+  stage: NEED_EDIT
+  cache: 
+    directories: 
+      - node_modules
+  dist: trusty
+  install: 
+    - "rm -rf ~/.yarn/bin/yarn || true && npm uninstall --global yarn; npm install --global yarn; yarn --version"
+  language: node_js
+  node_js: "13.13.0"
+  script: "echo please edit the job and run right script"
+
+_job_android: &_job_android
+  <<: *_job_node
+  name: "ANDROID JOB"
+  android: 
+    components: 
+      - tools-26.1.1
+      - build-tools-28.0.3
+      - extra-google-m2repository
+      - extra-android-m2repository
+      - platform-tools-28.0.2
+      - android-28
+      - sys-img-x86-android-28
+  cache: 
+    directories: 
+      - node_modules
+      - $HOME/.gradle
+  install: 
+    - "nvm install 13.13.0"
+    - "echo yes | sdkmanager \"platforms;android-28\""
+    - "rm -rf ~/.yarn/bin/yarn || true && npm uninstall --global yarn; npm install --global yarn; yarn --version"
+  jdk: oraclejdk8
+  language: android
+
+_job_apple: &_job_apple
+  <<: *_job_node
+  name: "APPLE JOB"
+  os: osx
+  osx_image: xcode11.3
+
+_deploy_conditions: &_deploy_conditions
+  if: tag IS present
+  branches: 
+    only: 
+      - master
+      - develop
+
+#================================= PROJECT SPECIFIC SETUP ====================================
+
+jobs: 
+  include:
+    # ------ TESTS ------
+    - <<: *_job_node
+      name: "Lint & Jest"
+      stage: Test
+      script: "echo "TEST"
+    # ------ BUILD ------
+    - <<: *_job_android
+      name: Android
+      stage: Build
+      script: "echo "BUILD ANDROID"
+    - <<: *_job_android
+      name: "Android TV"
+      stage: Build
+      script: "echo "BUILD ANDROIDTV"
+    - <<: *_job_apple
+      name: iOS
+      stage: Build
+      script: "echo "BUILD IOS"
+    - <<: *_job_apple
+      name: tvOS
+      stage: Build
+      script: "echo "BUILD TVOS"
+    - <<: *_job_node
+      name: "Web"
+      stage: Build
+      script: "echo "BUILD WEB"
+    # ------ RELEASE ----- 
+    - <<: *_job_node
+      name: "Release SDK"
+      stage: Release
+      script: "echo "RELEASE TO NPM"
+      <<: *_deploy_conditions
+    # ------ DEPLOY -----
+    - <<: *_job_android
+      name: "Android"
+      stage: Deploy
+      script: "echo "DEPLOY ANDROID"
+      <<: *_deploy_conditions
+    - <<: *_job_android
+      name: "Android TV"
+      stage: Deploy
+      script: "echo "DEPLOY ANDROIDTV"
+      <<: *_deploy_conditions
+    - <<: *_job_apple
+      name: iOS
+      stage: Deploy
+      script: "echo "DEPLOY IOS"
+      <<: *_deploy_conditions
+    - <<: *_job_apple
+      name: tvOS
+      stage: Deploy
+      script: "echo "DEPLOY TVOS"
+      <<: *_deploy_conditions
+    - <<: *_job_node
+      name: "Web"
+      stage: Deploy
+      script: "echo "DEPLOY WEB"
+      <<: *_deploy_conditions
+ 
+    
